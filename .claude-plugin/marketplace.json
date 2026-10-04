@@ -1,0 +1,16 @@
+{
+  "name": "moodle-mcp",
+  "owner": {
+    "name": "Isaac Anwar"
+  },
+  "metadata": {
+    "description": "Moodle connector for Claude: courses, materials, deadlines and grades."
+  },
+  "plugins": [
+    {
+      "name": "moodle",
+      "source": "./",
+      "description": "Read-only access to your Moodle courses, materials, deadlines, grades and forums, with a guided setup skill."
+    }
+  ]
+}
