@@ -1,0 +1,24 @@
+{
+  "name": "moodle",
+  "version": "1.0.0",
+  "description": "Read-only access to your Moodle courses, materials, deadlines, grades and forums, with a guided setup skill.",
+  "author": {
+    "name": "Isaac Anwar"
+  },
+  "repository": "https://github.com/IsaacAnwar/moodle-mcp",
+  "license": "MIT",
+  "keywords": [
+    "moodle",
+    "education",
+    "mcp",
+    "students"
+  ],
+  "mcpServers": {
+    "moodle": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server.js"
+      ]
+    }
+  }
+}
