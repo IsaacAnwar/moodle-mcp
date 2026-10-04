@@ -1,6 +1,6 @@
 {
   "name": "moodle",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Read-only access to your Moodle courses, materials, deadlines, grades and forums, with a guided setup skill.",
   "author": {
     "name": "Isaac Anwar"
