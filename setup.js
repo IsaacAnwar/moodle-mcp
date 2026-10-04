@@ -108,6 +108,7 @@ async function main() {
   const existing = readConfig();
   const site = normalizeSiteUrl(args[0] || existing.url || await ask('Moodle site URL (e.g. https://moodle.myschool.edu): '));
   if (!site) throw new Error('A Moodle site URL is required.');
+  if (!site.startsWith('https://')) throw new Error('The site must use https:// so your password is not sent unencrypted.');
   const d = describe(await publicConfig(site));
   console.log(`${site}: ${d.text}`);
   if (!d.ok) { process.exitCode = 2; return; }
@@ -117,6 +118,9 @@ async function main() {
   writeConfig({ ...existing, url: site, token });
   console.log(`\nConnected as ${info.fullname}. Saved to ${CONFIG_PATH} (readable only by you).`);
   console.log('Your password was not stored. Restart Claude Code (or your MCP client) to use the Moodle tools.');
+  if (process.env.MOODLE_TOKEN || process.env.MOODLE_URL) {
+    console.log('Warning: MOODLE_TOKEN/MOODLE_URL environment variables are set and override this config. Remove them.');
+  }
 }
 
 main().catch((e) => { console.error(`\nSetup failed: ${e.message}`); process.exitCode = 1; });

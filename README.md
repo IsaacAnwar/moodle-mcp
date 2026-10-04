@@ -52,7 +52,7 @@ Your school must have the Moodle mobile app API enabled. Most do. Run `node setu
 
 - **Read-only:** the server calls only Moodle's read functions. It can't submit, post or change anything.
 - **Same access as you:** the token sees only what you can already see in your browser.
-- **Your token stays on your Moodle site:** it's only ever sent to that site. File links pointing to other hosts are refused.
+- **Your token stays on your Moodle site:** it's only ever sent to that site, over HTTPS and inside the request body, never in a URL. File links pointing to other hosts are refused. Tool output never includes the token.
 - **Your password isn't stored:** it's used once to create the token and then discarded.
 - **Disconnecting:** to disconnect, delete `~/.moodle-mcp/config.json`. Changing your Moodle password usually revokes the token too.
 

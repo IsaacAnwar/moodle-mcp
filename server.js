@@ -282,23 +282,24 @@ async function searchMaterials({ query, course, include_past = false }) {
   return out.join('\n');
 }
 
-// Downloads a pluginfile URL with the token. The token is only ever sent to the Moodle site itself.
+// Downloads a pluginfile URL. The token is only sent to the Moodle site itself, over the site's own
+// protocol, and in the POST body rather than the URL so it never lands in logs or redirect targets.
 async function fetchFile(url) {
   if (!TOKEN || !SITE) throw new Error(NOT_SET_UP);
   let u;
   try { u = new URL(String(url)); } catch { throw new Error('url must be a full Moodle file URL.'); }
   if (u.host !== SITE_HOST) throw new Error(`Only files on ${SITE_HOST} can be fetched (this link points to ${u.host}; open it directly instead).`);
+  if (u.protocol !== new URL(SITE).protocol) throw new Error(`Refusing to send credentials over ${u.protocol} (the site uses ${new URL(SITE).protocol}).`);
+  if (u.username || u.password) throw new Error('File URLs with embedded credentials are not allowed.');
   if (!u.pathname.includes('/webservice/pluginfile.php/')) {
     if (!u.pathname.includes('/pluginfile.php/')) throw new Error('Not a Moodle file URL (expected .../pluginfile.php/...). Use the other tools for activity pages.');
     u.pathname = u.pathname.replace('/pluginfile.php/', '/webservice/pluginfile.php/');
   }
   u.searchParams.delete('token');
   u.searchParams.delete('forcedownload');
-  const shown = u.toString();
-  u.searchParams.set('token', TOKEN);
 
-  const res = await fetch(u);
-  if (!res.ok) throw new Error(`Download failed with HTTP ${res.status}: ${shown}`);
+  const res = await fetch(u, { method: 'POST', body: new URLSearchParams({ token: TOKEN }) });
+  if (!res.ok) throw new Error(`Download failed with HTTP ${res.status}: ${u}`);
   const type = (res.headers.get('content-type') || '').toLowerCase();
   const buf = Buffer.from(await res.arrayBuffer());
   if (type.includes('json')) {
@@ -716,7 +717,7 @@ async function handle(msg) {
       return reply(id, {
         protocolVersion: params?.protocolVersion || '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'moodle', version: '1.0.0' },
+        serverInfo: { name: 'moodle', version: '1.0.1' },
         instructions: INSTRUCTIONS,
       });
     case 'ping':
