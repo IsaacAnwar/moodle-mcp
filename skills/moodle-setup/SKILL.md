@@ -12,6 +12,7 @@ Connect this Moodle MCP server to the user's Moodle account (macOS, Windows or L
 ## 1. Locate the code
 
 - **Installed as a Claude Code plugin:** the repo root is two folders above this file, and the `moodle` MCP server is already registered. Skip step 5.
+- **Already working inside a clone of this repo:** use that folder.
 - **Otherwise:** clone it with `git clone https://github.com/IsaacAnwar/moodle-mcp "$HOME/moodle-mcp"`. On Windows, PowerShell accepts `$HOME` too.
 
 Below, `<repo>` means the absolute path to that folder.
@@ -47,25 +48,36 @@ node "<repo>/setup.js" <url>
 
 The script asks for their Moodle username and a hidden password. Schools that use single sign-on get step-by-step instructions instead. It saves the token to `~/.moodle-mcp/config.json`, readable only by the user. Wait until they say it printed "Connected as ...".
 
-Don't run this command yourself. It needs an interactive terminal and the user's credentials, and the `!` prefix doesn't work for it.
+Don't run this command yourself, and don't run it through your client's shell passthrough (such as Claude Code's `!` prefix). It needs a real interactive terminal and the user's credentials.
 
 ## 5. Register the server
 
-Skip this step if the plugin is installed.
+Skip this step if the Claude Code plugin is installed. Otherwise, register a stdio server named `moodle` that runs `node "<repo>/server.js"`, using the entry for your client. Use the absolute path. On Windows, write it with forward slashes in JSON files (`C:/Users/...`) or escape the backslashes.
 
-```
-claude mcp add --scope user moodle node "<repo>/server.js"
+- **Claude Code:** `claude mcp add --scope user moodle node "<repo>/server.js"`
+- **Codex:** `codex mcp add moodle -- node "<repo>/server.js"`
+- **Gemini CLI:** `gemini mcp add --scope user moodle node "<repo>/server.js"`
+- **Cursor:** add the JSON below to `~/.cursor/mcp.json`.
+- **Claude Desktop:** add the JSON below to `claude_desktop_config.json` (Settings, Developer, Edit Config).
+- **VS Code:** run "MCP: Open User Configuration" and add the same entry, but under a `"servers"` key instead of `"mcpServers"`.
+
+```json
+{
+  "mcpServers": {
+    "moodle": { "command": "node", "args": ["<repo>/server.js"] }
+  }
+}
 ```
 
-For other MCP clients (Claude Desktop, Cursor, etc.), add a stdio server with command `node` and args `["<repo>/server.js"]`.
+If the file already exists, merge the `moodle` entry into it instead of replacing the file. For any other MCP client, add a stdio server with command `node` and args `["<repo>/server.js"]`.
 
 ## 6. Verify
 
-Run `node "<repo>/server.js" --check`. It should print `OK: connected to ... as <name>`. Then tell the user to restart Claude Code. The tools load in new sessions: `list_courses`, `get_deadlines`, `get_course_contents`, `download_course_files`, `get_grades` and more.
+Run `node "<repo>/server.js" --check`. It should print `OK: connected to ... as <name>`. Then tell the user to restart their agent or MCP client, since most only load MCP servers when a session starts. The new session has `list_courses`, `get_deadlines`, `get_course_contents`, `download_course_files`, `get_grades` and more.
 
 ## Troubleshooting
 
 - **`invalidlogin`:** try the other username format (full email or the short username), then rerun step 4.
 - **The token stopped working,** e.g. after a password change: rerun step 4.
-- **Downloads go to the wrong place:** they default to `Desktop/Moodle Files`. Add `"download_dir": "<path>"` to `~/.moodle-mcp/config.json` to change it.
+- **Downloads go to the wrong place:** they default to `Desktop/Moodle Files`. To change it, tell the user to add `"download_dir": "<path>"` to `~/.moodle-mcp/config.json` themselves, or set the `MOODLE_DOWNLOAD_DIR` environment variable in the server's MCP config.
 - **To disconnect:** delete `~/.moodle-mcp/config.json`.

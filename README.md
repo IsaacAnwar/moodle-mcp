@@ -11,15 +11,21 @@ Give Claude (or any MCP-compatible AI agent) read-only access to your Moodle: co
 ```
 Then tell Claude to "set up Moodle". The bundled `moodle-setup` skill walks you through the rest.
 
-**Any other agent:** tell it to "set up https://github.com/IsaacAnwar/moodle-mcp by following `skills/moodle-setup/SKILL.md`".
+**Any other agent (Codex, Cursor, Gemini CLI, Copilot, etc.):** tell it to "set up Moodle from https://github.com/IsaacAnwar/moodle-mcp". The repo's `AGENTS.md` (also loaded through `CLAUDE.md` and `GEMINI.md`) points the agent to the setup skill in `skills/moodle-setup/SKILL.md`, which has registration steps for each client.
 
 **Manual setup:**
 ```
 git clone https://github.com/IsaacAnwar/moodle-mcp && cd moodle-mcp
 node setup.js https://your-moodle-site.edu         # enter your login here, in your own terminal
-claude mcp add --scope user moodle node "$PWD/server.js"
 node server.js --check
 ```
+Then register a stdio server named `moodle` with command `node` and args `["/absolute/path/to/moodle-mcp/server.js"]`. For example:
+```
+claude mcp add --scope user moodle node "$PWD/server.js"            # Claude Code
+codex mcp add moodle -- node "$PWD/server.js"                       # Codex
+gemini mcp add --scope user moodle node "$PWD/server.js"            # Gemini CLI
+```
+For Cursor, Claude Desktop and VS Code, see step 5 of the [setup skill](skills/moodle-setup/SKILL.md).
 
 Your school must have the Moodle mobile app API enabled. Most do. Run `node setup.js --probe <url>` to check yours. Schools that use single sign-on are supported: setup walks you through copying a login link from your browser.
 

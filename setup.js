@@ -117,7 +117,7 @@ async function main() {
   const info = await verify(site, token);
   writeConfig({ ...existing, url: site, token });
   console.log(`\nConnected as ${info.fullname}. Saved to ${CONFIG_PATH} (readable only by you).`);
-  console.log('Your password was not stored. Restart Claude Code (or your MCP client) to use the Moodle tools.');
+  console.log('Your password was not stored. Restart your AI agent or MCP client to use the Moodle tools.');
   if (process.env.MOODLE_TOKEN || process.env.MOODLE_URL) {
     console.log('Warning: MOODLE_TOKEN/MOODLE_URL environment variables are set and override this config. Remove them.');
   }
