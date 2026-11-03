@@ -79,5 +79,5 @@ Run `node "<repo>/server.js" --check`. It should print `OK: connected to ... as 
 
 - **`invalidlogin`:** try the other username format (full email or the short username), then rerun step 4.
 - **The token stopped working,** e.g. after a password change: rerun step 4.
-- **Downloads go to the wrong place:** they default to `Desktop/Moodle Files`. To change it, tell the user to add `"download_dir": "<path>"` to `~/.moodle-mcp/config.json` themselves, or set the `MOODLE_DOWNLOAD_DIR` environment variable in the server's MCP config.
+- **Downloads go to the wrong place:** they default to `Desktop/Moodle_Files`. To change it, tell the user to add `"download_dir": "<path>"` to `~/.moodle-mcp/config.json` themselves, or set the `MOODLE_DOWNLOAD_DIR` environment variable in the server's MCP config.
 - **To disconnect:** delete `~/.moodle-mcp/config.json`.

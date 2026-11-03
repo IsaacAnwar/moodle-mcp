@@ -34,7 +34,7 @@ function desktopDir() {
   return path.join(os.homedir(), 'Desktop');
 }
 const DESKTOP_DIR = desktopDir();
-const DOWNLOAD_DIR = process.env.MOODLE_DOWNLOAD_DIR || CONFIG.download_dir || path.join(DESKTOP_DIR, 'Moodle Files');
+const DOWNLOAD_DIR = process.env.MOODLE_DOWNLOAD_DIR || CONFIG.download_dir || path.join(DESKTOP_DIR, 'Moodle_Files');
 
 // ---------- Moodle web service ----------
 
@@ -188,6 +188,7 @@ function fmtSize(b) {
 }
 
 const safeName = (s) => String(s).replace(/[<>:"/\\|?*\x00-\x1f]/g, '').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '').slice(0, 100) || 'file';
+const folderName = (s) => safeName(s).replace(/\s*([-_])\s*/g, '$1').replace(/\s+/g, '_');
 
 function fmtModule(m, { descLimit = 600 } = {}) {
   // A label's "name" is just a truncated copy of its text, so show only the text.
@@ -310,11 +311,20 @@ async function fetchFile(url) {
   return { buf, type, filename: safeName(decodeURIComponent(u.pathname.split('/').pop() || 'file')) };
 }
 
-const resolveFolder = (folder) => (path.isAbsolute(folder) ? folder : path.join(DESKTOP_DIR, folder));
+function resolveFolder(folder) {
+  const abs = path.resolve(DESKTOP_DIR, folder);
+  const { root } = path.parse(abs);
+  let out = root;
+  for (const part of abs.slice(root.length).split(path.sep).filter(Boolean)) {
+    const next = path.join(out, part);
+    out = fs.existsSync(next) ? next : path.join(out, folderName(part));
+  }
+  return out;
+}
 
 async function downloadCourseFiles({ course, folder, layout = 'sections', dry_run = false }) {
   const c = await resolveCourse(course, { required: true });
-  const root = folder ? resolveFolder(String(folder)) : path.join(DOWNLOAD_DIR, safeName(c.fullname));
+  const root = folder ? resolveFolder(String(folder)) : path.join(DOWNLOAD_DIR, folderName(c.fullname));
   const flat = layout === 'flat';
   const jobs = [];
   const locked = [];
@@ -322,7 +332,7 @@ async function downloadCourseFiles({ course, folder, layout = 'sections', dry_ru
   const pages = [];
 
   for (const s of await getContents(c.id)) {
-    const sub = flat ? '' : safeName(`${String(s.section).padStart(2, '0')} ${decode(s.name)}`);
+    const sub = flat ? '' : folderName(`${String(s.section).padStart(2, '0')} ${decode(s.name)}`);
     for (const m of s.modules || []) {
       if (m.modname === 'label') continue;
       if (m.uservisible === false) {
@@ -333,7 +343,7 @@ async function downloadCourseFiles({ course, folder, layout = 'sections', dry_ru
       for (const f of m.contents || []) {
         if (f.type === 'url') links.push(`${decode(m.name).trim()}: ${f.fileurl}`);
         if (f.type !== 'file') continue;
-        const inner = flat ? [] : (f.filepath || '/').split('/').filter(Boolean).map(safeName);
+        const inner = flat ? [] : (f.filepath || '/').split('/').filter(Boolean).map(folderName);
         jobs.push({ url: f.fileurl, size: f.filesize, dest: path.join(root, sub, ...inner, safeName(f.filename)) });
       }
     }
@@ -341,7 +351,7 @@ async function downloadCourseFiles({ course, folder, layout = 'sections', dry_ru
   const ac = (await getAllAssignments()).find((x) => x.id === c.id);
   for (const a of ac?.assignments || []) {
     for (const f of a.introattachments || []) {
-      jobs.push({ url: f.fileurl, size: f.filesize, dest: path.join(root, flat ? '' : 'Assignment files', safeName(f.filename)) });
+      jobs.push({ url: f.fileurl, size: f.filesize, dest: path.join(root, flat ? '' : 'Assignment_files', safeName(f.filename)) });
     }
   }
 
@@ -401,7 +411,7 @@ async function getFile({ url, course }) {
 
   let dir = DOWNLOAD_DIR;
   if (course) {
-    try { dir = path.join(DOWNLOAD_DIR, safeName((await resolveCourse(course)).fullname)); } catch {}
+    try { dir = path.join(DOWNLOAD_DIR, folderName((await resolveCourse(course)).fullname)); } catch {}
   }
   fs.mkdirSync(dir, { recursive: true });
   const dest = path.join(dir, filename);
@@ -636,7 +646,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         course: COURSE_ARG,
-        folder: { type: 'string', description: 'Target folder: a name on the Desktop (e.g. "Y3CorporateFinance") or an absolute path. Default: Desktop\\Moodle Files\\<course name>.' },
+        folder: { type: 'string', description: 'Target folder: a name on the Desktop (e.g. "Y3CorporateFinance") or an absolute path. New folders never contain spaces (spaces become underscores). Default: Desktop\\Moodle_Files\\<course_name>.' },
         layout: { type: 'string', enum: ['sections', 'flat'], description: '"sections" (default) makes a subfolder per course section; "flat" puts all files in one folder.' },
         dry_run: { type: 'boolean', description: 'Only report what would be downloaded.' },
       },
@@ -703,7 +713,8 @@ const TOOLS = [
 
 const INSTRUCTIONS = `Read-only access to the student's Moodle${SITE ? ` (${SITE})` : ''}. Times are shown in ${TZ}. ` +
   'Tools taking `course` accept a course id or part of its name. Typical flow: list_courses, then get_course_contents and get_file for materials; ' +
-  'get_deadlines for what is due; get_assignment_details for instructions and feedback; get_grades for marks.';
+  'get_deadlines for what is due; get_assignment_details for instructions and feedback; get_grades for marks. ' +
+  'Never put spaces in folder names you create for Moodle files: use underscores instead (e.g. Corporate_Finance, not Corporate Finance).';
 
 const send = (msg) => process.stdout.write(JSON.stringify(msg) + '\n');
 const reply = (id, result) => send({ jsonrpc: '2.0', id, result });
