@@ -52,7 +52,9 @@ Your school must have the Moodle mobile app API enabled. Most do. Run `node setu
 { "url": "https://moodle.school.edu", "token": "…", "timezone": "Europe/Madrid", "download_dir": "/path/to/folder" }
 ```
 
-`timezone` and `download_dir` are optional. By default the server uses your system time zone and saves files to `Desktop/Moodle Files`, using OneDrive-redirected Desktops on Windows. The environment variables `MOODLE_URL`, `MOODLE_TOKEN`, `MOODLE_TZ` and `MOODLE_DOWNLOAD_DIR` override the file.
+`timezone` and `download_dir` are optional. By default the server uses your system time zone and saves files to `Desktop/Moodle_Files`, using OneDrive-redirected Desktops on Windows. The environment variables `MOODLE_URL`, `MOODLE_TOKEN`, `MOODLE_TZ` and `MOODLE_DOWNLOAD_DIR` override the file.
+
+Folders the server creates never contain spaces: course, section and subfolder names use underscores instead (e.g. `Moodle_Files/Corporate_Finance/01_Introduction`). Existing folders are left as they are.
 
 ## Security
 
