@@ -17,6 +17,8 @@ const SITE_HOST = SITE ? new URL(SITE).host : null;
 const TOKEN = (process.env.MOODLE_TOKEN || CONFIG.token || '').trim() || null;
 const TZ = process.env.MOODLE_TZ || CONFIG.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 const CACHE_MS = 10 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 30 * 1000;
+const DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 const NOT_SET_UP = `Moodle is not set up yet (no site URL or token in ${CONFIG_PATH}). Run the moodle-setup skill, or run "node setup.js" in a terminal.`;
 
 // The visible Desktop can be redirected (e.g. to OneDrive\Desktop), so ask Windows where it is.
@@ -48,12 +50,25 @@ function flatten(obj, prefix, out = new URLSearchParams()) {
   return out;
 }
 
+async function timedFetch(url, opts, ms, what) {
+  try {
+    return await fetch(url, { ...opts, signal: AbortSignal.timeout(ms) });
+  } catch (e) {
+    if (e.name === 'TimeoutError') throw new Error(`Moodle did not answer within ${ms / 1000} s (${what}). Try again later.`);
+    throw e;
+  }
+}
+
 async function ws(fn, args = {}) {
   if (!TOKEN || !SITE) throw new Error(NOT_SET_UP);
   const body = flatten({ wstoken: TOKEN, wsfunction: fn, moodlewsrestformat: 'json', ...args });
-  const res = await fetch(`${SITE}/webservice/rest/server.php`, { method: 'POST', body });
+  const res = await timedFetch(`${SITE}/webservice/rest/server.php`, { method: 'POST', body }, REQUEST_TIMEOUT_MS, fn);
   if (!res.ok) throw new Error(`Moodle returned HTTP ${res.status} for ${fn}`);
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error(`Moodle sent a non-JSON reply for ${fn} (the site may be in maintenance mode or behind a login page): ${clip(text.replace(/\s+/g, ' ').trim(), 200)}`);
+  }
   if (data && data.exception) throw new Error(`Moodle error in ${fn}: ${data.message} (${data.errorcode})`);
   return data;
 }
@@ -299,10 +314,14 @@ async function fetchFile(url) {
   u.searchParams.delete('token');
   u.searchParams.delete('forcedownload');
 
-  const res = await fetch(u, { method: 'POST', body: new URLSearchParams({ token: TOKEN }) });
+  const res = await timedFetch(u, { method: 'POST', body: new URLSearchParams({ token: TOKEN }) }, DOWNLOAD_TIMEOUT_MS, `download of ${u}`);
   if (!res.ok) throw new Error(`Download failed with HTTP ${res.status}: ${u}`);
   const type = (res.headers.get('content-type') || '').toLowerCase();
-  const buf = Buffer.from(await res.arrayBuffer());
+  let buf;
+  try { buf = Buffer.from(await res.arrayBuffer()); } catch (e) {
+    if (e.name === 'TimeoutError') throw new Error(`Download did not finish within ${DOWNLOAD_TIMEOUT_MS / 1000} s: ${u}`);
+    throw e;
+  }
   if (type.includes('json')) {
     let j = null;
     try { j = JSON.parse(buf.toString('utf8')); } catch {}
